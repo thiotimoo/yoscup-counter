@@ -23,6 +23,7 @@ type ScoreData = {
   homeColor: string;
   awayColor: string;
   showScoreboard: boolean;
+  showTimer: boolean;
 };
 
 export default function Page() {
@@ -75,6 +76,7 @@ export default function Page() {
     homeColor: "#ff4655",
     awayColor: "#1b97d4",
     showScoreboard: false,
+    showTimer: true,
   });
   const socketInitializer = async () => {
     socket.on("score", (scoredata) => {
@@ -101,13 +103,20 @@ export default function Page() {
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className=" text-white w-full max-w-4xl rounded-lg relative"
+        className=" text-white w-full max-w-6xl rounded-lg relative "
       >
-        <div className="flex flex-row items-center gap-4 p-2">
+        <div className="flex flex-row items-center gap-6 p-2">
           {/* Home Team Section */}
           <div className="flex flex-col flex-1 gap-2">
-            <div className="flex items-center space-x-4 rounded-lg overflow-clip -skew-x-12 bg-gradient-to-r from-black/95 to-emerald-950 text-white flex-1">
-              <div className="text-center w-full p-3 skew-x-12 translate-x-3">
+            <div className="flex flex-row items-center space-x-4 overflow-clip rounded-lg -skew-x-12 bg-gradient-to-r from-black/95 to-emerald-950 text-white flex-1">
+              {scoreData.homeLogo != "" && (
+                <img
+                  className="w-20 h-auto aspect-square object-contain p-2 skew-x-12"
+                  src={scoreData.homeLogo}
+                  alt={scoreData.homeTeam}
+                />
+              )}
+              <div className="text-center w-full skew-x-12 flex-1">
                 <motion.span
                   className={cn(
                     "text-3xl font-extrabold font-sans",
@@ -153,17 +162,19 @@ export default function Page() {
             </div>
           </div>
           {/* Away Team Section */}
-          <div className="bg-black/95 rounded-xl px-6 py-2">
-            {/* Score & Time Section */}
-            <div className="text-center flex flex-col">
-              <div className="text-xl font-semibold flex-row flex items-center justify-center gap-2 text-neutral-300">
-                Quarter {scoreData.quarter}
+          {scoreData.showTimer && (
+            <div className="bg-black/95 rounded-xl px-6 py-2">
+              {/* Score & Time Section */}
+              <div className="text-center flex flex-col">
+                <div className="text-xl font-semibold flex-row flex items-center justify-center gap-2 text-neutral-300">
+                  Quarter {scoreData.quarter}
+                </div>
+                <p className="text-4xl font-black">
+                  {formatTime(scoreData.timeLeft)}
+                </p>
               </div>
-              <p className="text-4xl font-black">
-                {formatTime(scoreData.timeLeft)}
-              </p>
             </div>
-          </div>
+          )}
           <div className="flex flex-col flex-1 gap-2">
             <div className="flex items-center space-x-4 rounded-lg overflow-clip skew-x-12 bg-gradient-to-l from-black/95 to-rose-950 text-white flex-1">
               <div className="text-6xl font-black p-3 px-6 h-full bg-rose-600 border-e-4 border-rose-400 text-center">
@@ -190,6 +201,13 @@ export default function Page() {
                   {scoreData.awaySchool}
                 </motion.span>
               </div>
+              {scoreData.awayLogo != "" && (
+                <img
+                  className="w-20 h-auto aspect-square object-contain p-2 -skew-x-12"
+                  src={scoreData.awayLogo}
+                  alt={scoreData.awayTeam}
+                />
+              )}
             </div>
             <div className="flex flex-row items-center justify-start ms-4 gap-4">
               <div className="gap-4 flex flex-row items-center bg-black/95 rounded-full p-1 px-2">

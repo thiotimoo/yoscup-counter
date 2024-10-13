@@ -30,6 +30,7 @@ export default function Page() {
     homeColor: "#ff4655",
     awayColor: "#1b97d4",
     showScoreboard: true,
+    showTimer: true,
   });
 
   useEffect(() => {
@@ -63,6 +64,10 @@ export default function Page() {
     setGameState((prev) => ({ ...prev, showScoreboard: !prev.showScoreboard }));
   };
 
+  const toggleTimer = () => {
+    setGameState((prev) => ({ ...prev, showTimer: !prev.showTimer }));
+  };
+
   return (
     <div className="container mx-auto p-4 bg-gray-100 min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-center">
@@ -75,6 +80,14 @@ export default function Page() {
           onCheckedChange={toggleScoreboard}
         />
         <Label htmlFor="show-scoreboard">Show Scoreboard</Label>
+      </div>
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="show-timer"
+          checked={gameState.showTimer}
+          onCheckedChange={toggleTimer}
+        />
+        <Label htmlFor="show-scoreboard">Show Timer</Label>
       </div>
       <Tabs defaultValue="game" className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-4">
@@ -301,6 +314,18 @@ export default function Page() {
                 }
                 className="mb-2"
               />
+              <Label htmlFor="homeLogo">Home Logo</Label>
+              <Input
+                id="homeLogo"
+                value={gameState.homeLogo}
+                onChange={(e) =>
+                  setGameState((prev) => ({
+                    ...prev,
+                    homeLogo: e.target.value,
+                  }))
+                }
+                className="mb-2"
+              />
               <Label htmlFor="homeColor">Home Color</Label>
               <Input
                 id="homeColor"
@@ -348,6 +373,18 @@ export default function Page() {
                   setGameState((prev) => ({
                     ...prev,
                     awayClass: e.target.value,
+                  }))
+                }
+                className="mb-2"
+              />
+              <Label htmlFor="awayLogo">Away Logo</Label>
+              <Input
+                id="awayLogo"
+                value={gameState.awayLogo}
+                onChange={(e) =>
+                  setGameState((prev) => ({
+                    ...prev,
+                    awayLogo: e.target.value,
                   }))
                 }
                 className="mb-2"
