@@ -12,38 +12,57 @@ import { socket } from "@/socket";
 
 export default function Page() {
   const [gameState, setGameState] = useState({
-    homeSchool: "Home Team",
-    homeTeam: "HOME",
-    awaySchool: "Away Team",
-    awayTeam: "AWAY",
+    homeSchool: "",
+    homeTeam: "",
+    awaySchool: "",
+    awayTeam: "",
     homeScore: 0,
     awayScore: 0,
     homeClass: "",
     awayClass: "",
-    homeTimeouts: 4,
-    awayTimeouts: 4,
-    homeLogo: "/placeholder.svg?height=50&width=50",
-    awayLogo: "/placeholder.svg?height=50&width=50",
+    homeFouls: 0,
+    awayFouls: 0,
+    homeLogo: "",
+    awayLogo: "",
     quarter: 1,
-    timeLeft: 100,
+    timeLeft: 600,
     isRunning: false,
     homeColor: "#ff4655",
     awayColor: "#1b97d4",
     showScoreboard: true,
     showTimer: true,
+    showQuarter: true,
+    startTime: null,
   });
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
+
     if (gameState.isRunning && gameState.timeLeft > 0) {
+      const startTime = gameState.startTime || Date.now();
+      setGameState((prev: any) => ({ ...prev, startTime }));
+
       interval = setInterval(() => {
-        setGameState((prev) => ({ ...prev, timeLeft: prev.timeLeft - 1 }));
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const newTimeLeft = Math.max(gameState.timeLeft - elapsed, 0);
+
+        setGameState((prev) => ({
+          ...prev,
+          timeLeft: newTimeLeft,
+        }));
+
+        if (newTimeLeft <= 0) {
+          clearInterval(interval);
+          setGameState((prev) => ({ ...prev, isRunning: false }));
+        }
       }, 1000);
     }
-    updateScore();
     return () => clearInterval(interval);
-  }, [gameState.isRunning, gameState.timeLeft]);
+  }, [gameState.isRunning]);
 
+  useEffect(() => {
+    updateScore();
+  }, [gameState.timeLeft]);
   const updateScore = () => {
     socket.emit("score", JSON.stringify(gameState));
   };
@@ -54,12 +73,25 @@ export default function Page() {
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
-  const handleTimeInput = (input: string) => {
+  const handleTimeInput = async (input: string) => {
     const [minutes, seconds] = input.split(":").map(Number);
     const totalSeconds = minutes * 60 + (seconds || 0);
-    setGameState((prev) => ({ ...prev, timeLeft: totalSeconds }));
+    const _isRunning = gameState.isRunning;
+    setGameState((prev: any) => ({
+      ...prev,
+      startTime: null,
+      timeLeft: totalSeconds,
+      isRunning: !_isRunning,
+    }));
+    await delay(10);
+    setGameState((prev: any) => ({
+      ...prev,
+      isRunning: _isRunning,
+    }));
   };
-
+  const delay = (delayInms: any) => {
+    return new Promise((resolve) => setTimeout(resolve, delayInms));
+  };
   const toggleScoreboard = () => {
     setGameState((prev) => ({ ...prev, showScoreboard: !prev.showScoreboard }));
   };
@@ -68,26 +100,40 @@ export default function Page() {
     setGameState((prev) => ({ ...prev, showTimer: !prev.showTimer }));
   };
 
+  const toggleQuarter = () => {
+    setGameState((prev) => ({ ...prev, showQuarter: !prev.showQuarter }));
+  };
+
   return (
     <div className="container mx-auto p-4 bg-gray-100 min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-center">
         YOSCUP Scoreboard Control
       </h1>
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="show-scoreboard"
-          checked={gameState.showScoreboard}
-          onCheckedChange={toggleScoreboard}
-        />
-        <Label htmlFor="show-scoreboard">Show Scoreboard</Label>
-      </div>
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="show-timer"
-          checked={gameState.showTimer}
-          onCheckedChange={toggleTimer}
-        />
-        <Label htmlFor="show-scoreboard">Show Timer</Label>
+      <div className="grid grid-cols-3">
+        <div className="flex items-center space-x-2 justify-center">
+          <Switch
+            id="show-scoreboard"
+            checked={gameState.showScoreboard}
+            onCheckedChange={toggleScoreboard}
+          />
+          <Label htmlFor="show-scoreboard">Show Scoreboard</Label>
+        </div>
+        <div className="flex items-center space-x-2 justify-center">
+          <Switch
+            id="show-timer"
+            checked={gameState.showTimer}
+            onCheckedChange={toggleTimer}
+          />
+          <Label htmlFor="show-scoreboard">Show Timer</Label>
+        </div>
+        <div className="flex items-center space-x-2 justify-center">
+          <Switch
+            id="show-timer"
+            checked={gameState.showQuarter}
+            onCheckedChange={toggleQuarter}
+          />
+          <Label htmlFor="show-scoreboard">Show Quarter</Label>
+        </div>
       </div>
       <Tabs defaultValue="game" className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-4">
@@ -132,6 +178,7 @@ export default function Page() {
                     setGameState((prev) => ({
                       ...prev,
                       isRunning: !prev.isRunning,
+                      startTime: null,
                     }))
                   }
                 >
@@ -144,11 +191,16 @@ export default function Page() {
                 </Button>
                 <Button
                   onClick={() =>
-                    setGameState((prev) => ({ ...prev, timeLeft: 100 }))
+                    setGameState((prev) => ({
+                      ...prev,
+                      timeLeft: 600,
+                      isRunning: false,
+                      startTime: null,
+                    }))
                   }
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
-                  Reset (1:40)
+                  Reset (10:00)
                 </Button>
               </div>
               <Input
@@ -184,9 +236,33 @@ export default function Page() {
                 >
                   -1
                 </Button>
+                <Button
+                  onClick={() =>
+                    setGameState((prev) => ({
+                      ...prev,
+                      homeScore: 0,
+                    }))
+                  }
+                >
+                  Reset
+                </Button>
               </div>
             </div>
-            <div className="text-center text-5xl font-bold self-center">-</div>
+            <div className="text-center text-5xl font-bold self-center">
+              <Button
+                onClick={() =>
+                  setGameState((prev) => ({
+                    ...prev,
+                    homeScore: prev.awayScore,
+                    awayScore: prev.homeScore,
+                    homeFouls: prev.awayFouls,
+                    awayFouls: prev.homeFouls,
+                  }))
+                }
+              >
+                Swap
+              </Button>
+            </div>
             <div className="text-center">
               <h3 className="font-semibold mb-2">{gameState.awayTeam}</h3>
               <div className="text-5xl font-bold mb-4">
@@ -213,20 +289,30 @@ export default function Page() {
                 >
                   -1
                 </Button>
+                <Button
+                  onClick={() =>
+                    setGameState((prev) => ({
+                      ...prev,
+                      awayScore: 0,
+                    }))
+                  }
+                >
+                  Reset
+                </Button>
               </div>
             </div>
 
             <div className="text-center">
-              <h3 className="font-semibold mb-2">Timeout</h3>
+              <h3 className="font-semibold mb-2">Fouls</h3>
               <div className="text-5xl font-bold mb-4">
-                {gameState.homeTimeouts}
+                {gameState.homeFouls}
               </div>
               <div className="flex justify-center space-x-2">
                 <Button
                   onClick={() =>
                     setGameState((prev) => ({
                       ...prev,
-                      homeTimeouts: prev.homeTimeouts + 1,
+                      homeFouls: prev.homeFouls + 1,
                     }))
                   }
                 >
@@ -236,26 +322,36 @@ export default function Page() {
                   onClick={() =>
                     setGameState((prev) => ({
                       ...prev,
-                      homeTimeouts: Math.max(prev.homeTimeouts - 1, 0),
+                      homeFouls: Math.max(prev.homeFouls - 1, 0),
                     }))
                   }
                 >
                   -1
+                </Button>
+                <Button
+                  onClick={() =>
+                    setGameState((prev) => ({
+                      ...prev,
+                      homeFouls: 0,
+                    }))
+                  }
+                >
+                  Reset
                 </Button>
               </div>
             </div>
             <div className="text-center text-5xl font-bold self-center">-</div>
             <div className="text-center">
-              <h3 className="font-semibold mb-2">Timeout</h3>
+              <h3 className="font-semibold mb-2">Fouls</h3>
               <div className="text-5xl font-bold mb-4">
-                {gameState.awayTimeouts}
+                {gameState.awayFouls}
               </div>
               <div className="flex justify-center space-x-2">
                 <Button
                   onClick={() =>
                     setGameState((prev) => ({
                       ...prev,
-                      awayTimeouts: prev.awayTimeouts + 1,
+                      awayFouls: prev.awayFouls + 1,
                     }))
                   }
                 >
@@ -265,11 +361,21 @@ export default function Page() {
                   onClick={() =>
                     setGameState((prev) => ({
                       ...prev,
-                      awayTimeouts: Math.max(prev.awayTimeouts - 1, 0),
+                      awayFouls: Math.max(prev.awayFouls - 1, 0),
                     }))
                   }
                 >
                   -1
+                </Button>
+                <Button
+                  onClick={() =>
+                    setGameState((prev) => ({
+                      ...prev,
+                      awayFouls: 0,
+                    }))
+                  }
+                >
+                  Reset
                 </Button>
               </div>
             </div>
